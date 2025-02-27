@@ -35,7 +35,6 @@ def main():
     if 'xpath_values' not in st.session_state:
         st.session_state.xpath_values = {}
 
-
     # Course Schedule YAML Section
     if st.session_state.active_section == "schedule":
         st.header("Course Schedule Generator")
@@ -70,12 +69,12 @@ def main():
                             st.error("Invalid time format. Please use HH:MM format (e.g., 12:05)")
                         else:
                             if course_name not in st.session_state.courses:
-                                st.session_state.courses.append(course_name)  # Changed from add to append
+                                st.session_state.courses.append(course_name)
                             st.session_state.schedule[day].append({
                                 'name': course_name,
                                 'start_time': valid_start,
                                 'end_time': valid_end,
-                                'send_message': send_message  # This will be a proper boolean
+                                'send_message': send_message
                             })
                             st.success(f"Added {course_name} to {day}")
 
@@ -89,8 +88,24 @@ def main():
                             st.write(f"📚 {course['name']}: {course['start_time']} - {course['end_time']} | Notifications: {'✅' if course['send_message'] else '❌'}")
                         with col3:
                             if st.button(f"Remove", key=f"remove_{day}_{idx}"):
+                                course_name = course['name']
+                                # Remove course from schedule
                                 st.session_state.schedule[day].pop(idx)
-                                st.experimental_rerun()
+
+                                # Check if course exists in other days
+                                is_used = False
+                                for other_day, courses in st.session_state.schedule.items():
+                                    if any(c['name'] == course_name for c in courses):
+                                        is_used = True
+                                        break
+
+                                # If course is not used anywhere else, remove from courses list and xpath values
+                                if not is_used:
+                                    if course_name in st.session_state.courses:
+                                        st.session_state.courses.remove(course_name)
+                                    if course_name in st.session_state.xpath_values:
+                                        del st.session_state.xpath_values[course_name]
+                                st.rerun()
                     st.divider()
             else:
                 st.info(f"No courses scheduled for {day}")
@@ -125,8 +140,8 @@ def main():
                     help="Select from courses already added to the schedule"
                 )
                 xpath_value = st.text_area("Course XPath", 
-                                      placeholder="/html/body/div[4]/...",
-                                      help="Enter the full XPath for the course")
+                                       placeholder="/html/body/div[4]/...",
+                                       help="Enter the full XPath for the course")
 
                 if st.form_submit_button("Add Course"):
                     if not xpath_value:
@@ -152,12 +167,14 @@ def main():
 
             if courses_to_remove:
                 for course in courses_to_remove:
-                    st.session_state.courses.remove(course)
-                    st.session_state.xpath_values.pop(course, None)
-                st.experimental_rerun()
+                    if course in st.session_state.courses:
+                        st.session_state.courses.remove(course)
+                    if course in st.session_state.xpath_values:
+                        del st.session_state.xpath_values[course]
+                st.rerun()
 
             if st.button("Generate XPath YAML"):
-                xpath_content = generate_xpath_yaml(st.session_state.xpath_values)
+                xpath_content = generate_xpath_yaml(courses=st.session_state.courses)
                 st.download_button(
                     label="Download XPath YAML",
                     data=xpath_content,
@@ -168,14 +185,14 @@ def main():
     # Reset button
     if st.session_state.active_section:
         if st.button("Reset All"):
-            st.session_state.courses = []  # Changed from set to list
+            st.session_state.courses = []
             st.session_state.schedule = {
                 'Monday': [], 'Tuesday': [], 'Wednesday': [],
                 'Thursday': [], 'Friday': []
             }
             st.session_state.active_section = None
             st.session_state.xpath_values = {}
-            st.experimental_rerun()
+            st.rerun()
 
 if __name__ == "__main__":
     main()
