@@ -166,8 +166,7 @@ def main():
 
             if courses_to_remove:
                 for course in courses_to_remove:
-                    if course in st.session_state.courses:
-                        st.session_state.courses.remove(course)
+                    # Only remove the URL mapping, keep the course in the schedule
                     if course in st.session_state.url_values:
                         del st.session_state.url_values[course]
                 st.rerun()
