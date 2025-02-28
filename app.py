@@ -1,13 +1,13 @@
 import streamlit as st
 import yaml
-from utils import validate_time_format, generate_course_schedule_yaml, generate_xpath_yaml
+from utils import validate_time_format, generate_course_schedule_yaml, generate_url_yaml, validate_url
 
 def main():
     st.set_page_config(page_title="Course Schedule YAML Generator", layout="wide")
 
     st.title("Course Schedule YAML Generator")
     st.markdown("""
-    Generate YAML files for course schedules and XPath mappings.
+    Generate YAML files for course schedules and course URLs.
     Choose an option below to get started.
     """)
 
@@ -19,12 +19,12 @@ def main():
             st.session_state.active_section = "schedule"
 
     with col2:
-        if st.button("Create Course XPath YAML", use_container_width=True):
-            st.session_state.active_section = "xpath"
+        if st.button("Create URL Course YAML", use_container_width=True):
+            st.session_state.active_section = "url"
 
-    # Initialize session state for courses and schedule
+    # Initialize session state
     if 'courses' not in st.session_state:
-        st.session_state.courses = []  # Changed from set to list
+        st.session_state.courses = []
     if 'schedule' not in st.session_state:
         st.session_state.schedule = {
             'Monday': [], 'Tuesday': [], 'Wednesday': [],
@@ -32,19 +32,19 @@ def main():
         }
     if 'active_section' not in st.session_state:
         st.session_state.active_section = None
-    if 'xpath_values' not in st.session_state:
-        st.session_state.xpath_values = {}
+    if 'url_values' not in st.session_state:
+        st.session_state.url_values = {}
 
     # Course Schedule YAML Section
     if st.session_state.active_section == "schedule":
         st.header("Course Schedule Generator")
 
-        # Course input form in a container for better organization
+        # Course input form
         with st.container():
             st.subheader("Add New Course")
             with st.form("course_form"):
                 day = st.selectbox("Select Day", 
-                                  ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'])
+                                ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'])
                 course_name = st.text_input("Course Name *", help="This field is required")
                 col1, col2 = st.columns(2)
                 with col1:
@@ -52,11 +52,10 @@ def main():
                 with col2:
                     end_time = st.text_input("End Time (HH:MM) *", placeholder="13:05")
 
-                # Changed checkbox to selectbox with default False
                 send_message = st.selectbox("Send Message", 
-                                            options=[False, True],
-                                            index=0,
-                                            format_func=lambda x: str(x))
+                                        options=[False, True],
+                                        index=0,
+                                        format_func=lambda x: str(x))
 
                 if st.form_submit_button("Add Course"):
                     if not all([course_name, start_time, end_time]):
@@ -78,6 +77,7 @@ def main():
                             })
                             st.success(f"Added {course_name} to {day}")
 
+        # Display current schedule
         st.subheader("Current Schedule")
         for day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']:
             if st.session_state.schedule[day]:
@@ -89,7 +89,6 @@ def main():
                         with col3:
                             if st.button(f"Remove", key=f"remove_{day}_{idx}"):
                                 course_name = course['name']
-                                # Remove course from schedule
                                 st.session_state.schedule[day].pop(idx)
 
                                 # Check if course exists in other days
@@ -99,12 +98,11 @@ def main():
                                         is_used = True
                                         break
 
-                                # If course is not used anywhere else, remove from courses list and xpath values
                                 if not is_used:
                                     if course_name in st.session_state.courses:
                                         st.session_state.courses.remove(course_name)
-                                    if course_name in st.session_state.xpath_values:
-                                        del st.session_state.xpath_values[course_name]
+                                    if course_name in st.session_state.url_values:
+                                        del st.session_state.url_values[course_name]
                                 st.rerun()
                     st.divider()
             else:
@@ -121,17 +119,16 @@ def main():
                     mime="text/yaml"
                 )
 
-    # XPath YAML Section
-    elif st.session_state.active_section == "xpath":
-        st.header("Course XPath Generator")
+    # URL YAML Section
+    elif st.session_state.active_section == "url":
+        st.header("Course URL Generator")
         st.info("Note: Course names must match exactly with those used in the course schedule YAML file.")
 
-        with st.form("xpath_form"):
-            # Check if there are any courses added to the schedule
+        with st.form("url_form"):
             if not st.session_state.courses:
                 st.warning("Please add courses in the Course Schedule section first.")
                 course_name = st.text_input("Course Name", disabled=True)
-                xpath_value = st.text_area("Course XPath", disabled=True)
+                url_value = st.text_input("Course URL", disabled=True)
                 st.form_submit_button("Add Course", disabled=True)
             else:
                 course_name = st.selectbox(
@@ -139,16 +136,18 @@ def main():
                     options=st.session_state.courses,
                     help="Select from courses already added to the schedule"
                 )
-                xpath_value = st.text_area("Course XPath", 
-                                       placeholder="/html/body/div[4]/...",
-                                       help="Enter the full XPath for the course")
+                url_value = st.text_input("Course URL", 
+                                     placeholder="https://example.com/course",
+                                     help="Enter the complete URL for the course")
 
                 if st.form_submit_button("Add Course"):
-                    if not xpath_value:
-                        st.error("Please enter the XPath value")
+                    if not url_value:
+                        st.error("Please enter the URL")
+                    elif not validate_url(url_value):
+                        st.error("Please enter a valid URL (e.g., https://example.com/course)")
                     else:
-                        st.session_state.xpath_values[course_name] = xpath_value
-                        st.success(f"Added XPath for {course_name}")
+                        st.session_state.url_values[course_name] = url_value
+                        st.success(f"Added URL for {course_name}")
 
         if st.session_state.courses:
             st.subheader("Current Courses")
@@ -158,27 +157,27 @@ def main():
                 with col1:
                     st.write(f"Course: {course}")
                 with col2:
-                    if course in st.session_state.xpath_values:
-                        st.text_area("XPath", value=st.session_state.xpath_values[course], 
-                                   key=f"xpath_view_{i}", disabled=True)
+                    if course in st.session_state.url_values:
+                        st.text_input("URL", value=st.session_state.url_values[course], 
+                                   key=f"url_view_{i}", disabled=True)
                 with col3:
-                    if st.button("Remove", key=f"remove_xpath_{i}"):
+                    if st.button("Remove", key=f"remove_url_{i}"):
                         courses_to_remove.append(course)
 
             if courses_to_remove:
                 for course in courses_to_remove:
                     if course in st.session_state.courses:
                         st.session_state.courses.remove(course)
-                    if course in st.session_state.xpath_values:
-                        del st.session_state.xpath_values[course]
+                    if course in st.session_state.url_values:
+                        del st.session_state.url_values[course]
                 st.rerun()
 
-            if st.button("Generate XPath YAML"):
-                xpath_content = generate_xpath_yaml(courses=st.session_state.courses)
+            if st.button("Generate URL YAML"):
+                url_content = generate_url_yaml(courses=st.session_state.courses)
                 st.download_button(
-                    label="Download XPath YAML",
-                    data=xpath_content,
-                    file_name="course_xpath.yaml",
+                    label="Download URL YAML",
+                    data=url_content,
+                    file_name="course_url.yaml",
                     mime="text/yaml"
                 )
 
@@ -191,7 +190,7 @@ def main():
                 'Thursday': [], 'Friday': []
             }
             st.session_state.active_section = None
-            st.session_state.xpath_values = {}
+            st.session_state.url_values = {}
             st.rerun()
 
 if __name__ == "__main__":
