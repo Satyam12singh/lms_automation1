@@ -1,20 +1,9 @@
-import streamlit as st
-from datetime import datetime
 import yaml
+from datetime import datetime
 from typing import Dict, List, Union
 
 def validate_time_format(time_str: str) -> Union[str, bool]:
-    """
-    Validate and standardize time format.
-
-    Args:
-        time_str: Time string to validate
-
-    Returns:
-        Standardized time string in HH:MM format if valid, False otherwise
-    """
     try:
-        # Try parsing with different formats
         for fmt in ["%H:%M", "%I:%M", "%H:%M:%S", "%I:%M:%S"]:
             try:
                 parsed_time = datetime.strptime(time_str, fmt)
@@ -26,56 +15,24 @@ def validate_time_format(time_str: str) -> Union[str, bool]:
         return False
 
 def boolean_representer(dumper: yaml.Dumper, data: bool) -> yaml.ScalarNode:
-    """
-    Custom representer for boolean values to maintain Python capitalization.
-
-    Args:
-        dumper: YAML dumper instance
-        data: Boolean value to represent
-
-    Returns:
-        YAML scalar node with proper capitalization
-    """
     if data:
         return dumper.represent_scalar('tag:yaml.org,2002:bool', 'True')
     return dumper.represent_scalar('tag:yaml.org,2002:bool', 'False')
 
 def generate_course_schedule_yaml(schedule_data: Dict[str, List[Dict]]) -> str:
-    """
-    Generate YAML string for course schedule.
-
-    Args:
-        schedule_data: Dictionary containing schedule information
-
-    Returns:
-        Formatted YAML string
-    """
-    # Add custom boolean representer
     yaml.add_representer(bool, boolean_representer)
-
-    # Convert the data to proper format
     formatted_data = {}
     for day, courses in schedule_data.items():
-        if courses:  # Only include days with courses
+        if courses:
             formatted_data[day] = []
             for course in courses:
                 formatted_data[day].append({
                     'course': course['name'],
                     'start_time': course['start_time'],
                     'end_time': course['end_time'],
-                    'send_message': course['send_message']  # Will now use True/False capitalization
+                    'send_message': course['send_message']
                 })
-
     return yaml.dump(formatted_data, sort_keys=False, allow_unicode=True)
 
-def generate_xpath_yaml(xpath_values: Dict[str, str]) -> str:
-    """
-    Generate YAML string for Course Urls.
-
-    Args:
-        xpath_values: Dictionary mapping course names to XPath values
-
-    Returns:
-        Formatted YAML string
-    """
-    return yaml.dump(xpath_values, sort_keys=False, allow_unicode=True)
+def generate_url_yaml(url_values: Dict[str, str]) -> str:
+    return yaml.dump(url_values, sort_keys=False, allow_unicode=True)
