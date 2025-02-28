@@ -19,7 +19,7 @@ def main():
             st.session_state.active_section = "schedule"
 
     with col2:
-        if st.button("Create Course XPath YAML", use_container_width=True):
+        if st.button("Create Course Url YAML", use_container_width=True):
             st.session_state.active_section = "xpath"
 
     # Initialize session state for courses and schedule
@@ -123,7 +123,7 @@ def main():
 
     # XPath YAML Section
     elif st.session_state.active_section == "xpath":
-        st.header("Course XPath Generator")
+        st.header("Course Url Generator")
         st.info("Note: Course names must match exactly with those used in the course schedule YAML file.")
 
         with st.form("xpath_form"):
@@ -131,7 +131,7 @@ def main():
             if not st.session_state.courses:
                 st.warning("Please add courses in the Course Schedule section first.")
                 course_name = st.text_input("Course Name", disabled=True)
-                xpath_value = st.text_area("Course XPath", disabled=True)
+                xpath_value = st.text_area("Course Url", disabled=True)
                 st.form_submit_button("Add Course", disabled=True)
             else:
                 course_name = st.selectbox(
@@ -139,9 +139,9 @@ def main():
                     options=st.session_state.courses,
                     help="Select from courses already added to the schedule"
                 )
-                xpath_value = st.text_area("Course XPath", 
-                                       placeholder="/html/body/div[4]/...",
-                                       help="Enter the full XPath for the course")
+                xpath_value = st.text_area("Course Url", 
+                                       placeholder="https://lms.iiitkottayam.ac.in/course/view.php?id=444",
+                                       help="Enter the course Url here")
 
                 if st.form_submit_button("Add Course"):
                     if not xpath_value:
@@ -173,12 +173,12 @@ def main():
                         del st.session_state.xpath_values[course]
                 st.rerun()
 
-            if st.button("Generate XPath YAML"):
+            if st.button("Generate Url YAML"):
                 xpath_content = generate_xpath_yaml(courses=st.session_state.courses)
                 st.download_button(
-                    label="Download XPath YAML",
+                    label="Download Url YAML",
                     data=xpath_content,
-                    file_name="course_xpath.yaml",
+                    file_name="course_url.yaml",
                     mime="text/yaml"
                 )
 

@@ -70,7 +70,7 @@ def generate_course_schedule_yaml(schedule_data: Dict[str, List[Dict]]) -> str:
 
 def generate_xpath_yaml(xpath_values: Dict[str, str]) -> str:
     """
-    Generate YAML string for course xpaths.
+    Generate YAML string for Course Urls.
 
     Args:
         xpath_values: Dictionary mapping course names to XPath values
